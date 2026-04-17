@@ -58,16 +58,9 @@ What happens automatically:
 
 UI preview section for GitHub:
 
-```text
-Hero branding: Yuki Fan Translator
-Main workflow: source text -> provider/model setup -> glossary/notes -> export/extraction/proofreading previews
-```
+<img width="1477" height="802" alt="image" src="https://github.com/user-attachments/assets/8c1ad2f7-c660-4a08-85f8-30fb90e851ab" />
+<img width="1505" height="755" alt="image" src="https://github.com/user-attachments/assets/775ce69a-4772-4ba4-badd-f4b59a5f0eb0" />
 
-If you want a polished repo screenshot later, add an image like:
-
-```markdown
-![Yuki Fan Translator UI](docs/screenshot-yuki-fan-translator.png)
-```
 
 ## What It Does
 
