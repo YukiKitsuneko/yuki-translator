@@ -1,0 +1,69 @@
+name: yuki_translator
+
+services:
+  model_prep:
+    image: curlimages/curl:8.12.1
+    container_name: yuki_translator_model_prep
+    volumes:
+      - ./models:/models
+    command:
+      - sh
+      - -lc
+      - |
+        set -eu
+        model_path="/models/Gemma4_E2B_Abliterated_Baked_HF_Ready.i1-Q5_K_M.gguf"
+        if [ -s "$$model_path" ]; then
+          echo "Model already present: $$model_path"
+          exit 0
+        fi
+        echo "Downloading model to $$model_path"
+        curl -L --fail --output "$$model_path" "https://huggingface.co/mradermacher/Gemma4_E2B_Abliterated_Baked_HF_Ready-i1-GGUF/resolve/main/Gemma4_E2B_Abliterated_Baked_HF_Ready.i1-Q5_K_M.gguf?download=1"
+
+  llama:
+    image: ${LLAMA_IMAGE:-ghcr.io/ggml-org/llama.cpp:server}
+    container_name: yuki_translator_llama
+    depends_on:
+      model_prep:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 10m
+    entrypoint:
+      - /bin/sh
+      - -lc
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./models:/models
+    command:
+      - >
+        exec /app/llama-server
+        -m /models/Gemma4_E2B_Abliterated_Baked_HF_Ready.i1-Q5_K_M.gguf
+        -c ${LLAMA_CONTEXT_SIZE:-4096}
+        --host 0.0.0.0
+        --port 8080
+        -ngl ${LLAMA_GPU_LAYERS:-0}
+        ${LLAMA_EXTRA_ARGS:-}
+
+  app:
+    build:
+      context: .
+    image: fantralslator
+    container_name: yuki_translator_ui
+    depends_on:
+      llama:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      FAN_TRANSLATION_SYSTEM_PROMPT_FILE: ${FAN_TRANSLATION_SYSTEM_PROMPT_FILE:-}
+      FAN_TRANSLATION_PROOFREADING_PROMPT_FILE: ${FAN_TRANSLATION_PROOFREADING_PROMPT_FILE:-}
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./secrets:/run/secrets:ro
+    command: ["ui", "--project", "config/project.json", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,0 +1,22 @@
+{
+  "provider": "llama.cpp",
+  "model": "Gemma4_E2B_Abliterated_Baked_HF_Ready",
+  "api_base": "http://127.0.0.1:8080/v1",
+  "api_key": "llama.cpp",
+  "api_key_env": "",
+  "runtime": "llama.cpp",
+  "gguf_path": null,
+  "hf_repo": "mradermacher/Gemma4_E2B_Abliterated_Baked_HF_Ready-i1-GGUF",
+  "hf_file": "Gemma4_E2B_Abliterated_Baked_HF_Ready.i1-Q5_K_M.gguf",
+  "llama_context_size": 8192,
+  "source_language": "Japanese",
+  "target_language": "English",
+  "temperature": 0.2,
+  "chunk_size": 8,
+  "context_window": 2,
+  "style": "Natural fan translation with strong character voice and consistent terminology.",
+  "preserve_line_breaks": true,
+  "glossary_path": "glossary.example.json",
+  "notes_path": null,
+  "request_timeout_seconds": 300
+}

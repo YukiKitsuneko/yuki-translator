@@ -1,0 +1,2 @@
+[console_scripts]
+fantranslate = fan_translation.cli:main

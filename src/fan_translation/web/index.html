@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Yuki Fan Translator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <div class="backdrop"></div>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Yuki Fan Translator</p>
+        <h1>Shape raw script dumps into review-ready translations.</h1>
+        <p class="lede">
+          Edit the source text, tune the prompt, lock in glossary terms, then export
+          bilingual Markdown or JSON without leaving the browser.
+        </p>
+        <p class="lede">Beta 0.0.001</p>
+        <div class="hero-grid">
+          <div class="stat-card">
+            <span class="stat-label">Workflow</span>
+            <strong>Draft, compare, export</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Engine</span>
+            <strong id="project-model">gemma4</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Output</span>
+            <strong>Export + extraction + proofread previews</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel composer">
+        <div class="panel-head">
+          <h2>Translation Setup</h2>
+          <p>Everything here feeds one translation request.</p>
+        </div>
+
+        <form id="translate-form" class="form-grid">
+          <label class="field field-wide">
+            <span>Source text</span>
+            <textarea id="source-text" name="source_text" rows="12" placeholder="Paste your script here. One non-empty line becomes one translation unit."></textarea>
+          </label>
+
+          <label class="field">
+            <span>Provider</span>
+            <select id="provider" name="provider">
+              <option value="llama.cpp">llama.cpp</option>
+              <option value="openai">ChatGPT / OpenAI</option>
+              <option value="gemini">Gemini</option>
+              <option value="custom">Custom OpenAI-compatible</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Model</span>
+            <select id="model-select" name="model_select"></select>
+            <input id="model" name="model" type="text" placeholder="Enter a custom model ID.">
+          </label>
+
+          <label class="field">
+            <span>Runtime</span>
+            <input id="runtime" name="runtime" type="text" readonly>
+          </label>
+
+          <label class="field">
+            <span>API base</span>
+            <input id="api-base" name="api_base" type="text">
+          </label>
+
+          <label class="field">
+            <span>API key</span>
+            <input id="api-key" name="api_key" type="password" placeholder="Leave blank to use an environment variable on the server.">
+          </label>
+
+          <label class="field">
+            <span>Source language</span>
+            <input id="source-language" name="source_language" type="text">
+          </label>
+
+          <label class="field">
+            <span>Target language</span>
+            <input id="target-language" name="target_language" type="text">
+          </label>
+
+          <label class="field field-wide">
+            <span>GGUF path</span>
+            <input id="gguf-path" name="gguf_path" type="text" placeholder="Optional local GGUF path. Leave blank to stream from the HF repo via llama.cpp.">
+          </label>
+
+          <label class="field field-wide">
+            <span>HF repo</span>
+            <input id="hf-repo" name="hf_repo" type="text">
+          </label>
+
+          <label class="field field-wide">
+            <span>HF file</span>
+            <input id="hf-file" name="hf_file" type="text" placeholder="Pick a quant file from the Hugging Face repo.">
+          </label>
+
+          <label class="field">
+            <span>Temperature</span>
+            <input id="temperature" name="temperature" type="number" step="0.1" min="0" max="2">
+          </label>
+
+          <label class="field">
+            <span>Chunk size</span>
+            <input id="chunk-size" name="chunk_size" type="number" min="1">
+          </label>
+
+          <label class="field">
+            <span>Context window</span>
+            <input id="context-window" name="context_window" type="number" min="0">
+          </label>
+
+          <label class="field">
+            <span>Request timeout</span>
+            <input id="request-timeout-seconds" name="request_timeout_seconds" type="number" min="10">
+          </label>
+
+          <label class="field">
+            <span>llama.cpp ctx size</span>
+            <input id="llama-context-size" name="llama_context_size" type="number" min="512" step="256">
+          </label>
+
+          <label class="field field-wide">
+            <span>Style brief</span>
+            <textarea id="style" name="style" rows="4" placeholder="Describe tone, voice, honorific handling, slang, and lore preferences."></textarea>
+          </label>
+
+          <label class="field field-wide">
+            <span>Glossary</span>
+            <textarea id="glossary-text" name="glossary_text" rows="8" placeholder="Use JSON or lines like:&#10;先輩 | senpai | Keep honorific"></textarea>
+          </label>
+
+          <label class="field field-wide">
+            <span>Notes</span>
+            <textarea id="notes" name="notes" rows="5" placeholder="Optional translator notes, release conventions, or scene-specific guidance."></textarea>
+          </label>
+
+          <div class="actions field-wide">
+            <button id="translate-button" type="submit">Translate</button>
+            <button id="download-markdown" type="button" class="ghost" disabled>Download Markdown</button>
+            <button id="download-json" type="button" class="ghost" disabled>Download JSON</button>
+            <span id="status" class="status">Loading project defaults...</span>
+          </div>
+
+          <div class="timing-strip field-wide">
+            <div class="metric-chip">
+              <span class="timing-label">Last translation time</span>
+              <strong id="translation-timer" class="timing-value">No translation yet.</strong>
+            </div>
+            <div class="metric-chip">
+              <span class="timing-label">Throughput</span>
+              <strong id="tokens-per-second" class="timing-value">No translation yet.</strong>
+            </div>
+            <div class="metric-chip">
+              <span class="timing-label">Total tokens</span>
+              <strong id="token-count" class="timing-value">No translation yet.</strong>
+            </div>
+          </div>
+
+          <div class="field field-wide">
+            <span>Launch command</span>
+            <pre id="launch-command" class="command-preview">Loading llama.cpp command...</pre>
+          </div>
+        </form>
+      </section>
+
+      <section class="results-grid">
+        <div class="preview-column">
+          <section class="panel preview-panel">
+            <div class="panel-head">
+              <h2>Export Preview</h2>
+              <p>Generated Markdown for your release notes or editing pass.</p>
+            </div>
+            <pre id="preview" class="preview">No output yet.</pre>
+          </section>
+
+          <section class="panel extraction-panel">
+            <div class="panel-head">
+              <h2>Extraction Preview</h2>
+              <p>New characters, locations, and terms detected in the current excerpt.</p>
+            </div>
+            <div id="extraction-preview" class="extraction-preview empty">
+              <p>No translation yet.</p>
+            </div>
+          </section>
+
+          <section class="panel proofread-panel">
+            <div class="panel-head">
+              <h2>Proofreading Preview</h2>
+              <p>Read the translated lines in a cleaner pass before final export.</p>
+            </div>
+            <div id="proofreading-preview" class="proofreading-preview empty">
+              <p>No translation yet.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "provider": "openai",
+  "model": "gpt-4.1-mini",
+  "api_base": "https://api.openai.com/v1",
+  "api_key": "",
+  "api_key_env": "OPENAI_API_KEY",
+  "runtime": "openai",
+  "gguf_path": null,
+  "hf_repo": "",
+  "hf_file": "",
+  "llama_context_size": 8192,
+  "source_language": "Japanese",
+  "target_language": "English",
+  "temperature": 0.2,
+  "chunk_size": 8,
+  "context_window": 2,
+  "style": "Natural fan translation with strong character voice and consistent terminology.",
+  "preserve_line_breaks": true,
+  "glossary_path": "glossary.example.json",
+  "notes_path": null,
+  "request_timeout_seconds": 300
+}

@@ -1,0 +1,249 @@
+Metadata-Version: 2.4
+Name: fan-translation-gemma4
+Version: 0.1.0
+Summary: Fan translation workflow scaffold powered by a configurable Gemma model.
+Author: OpenAI Codex
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+
+# Fan Translation Project for Gemma4 GGUF
+
+This repository is a starter kit for a fan translation workflow that uses a local or self-hosted OpenAI-compatible endpoint.
+
+It is preconfigured around this Hugging Face GGUF source:
+
+- `mradermacher/Gemma4_E2B_Abliterated_Baked_HF_Ready-i1-GGUF`
+
+It is designed for lightweight script translation work such as:
+
+- manga and visual novel dialogue dumps
+- subtitle drafts
+- scene scripts and chapter text files
+- glossary-driven consistency passes
+
+## What it does
+
+- reads plain text source scripts line by line
+- sends them to a configurable chat-completions endpoint in small chunks
+- keeps nearby context so the model sees adjacent lines
+- injects a glossary and style notes into the prompt
+- writes bilingual output in Markdown or JSON
+
+## Project layout
+
+```text
+config/
+  glossary.example.json
+  project.example.json
+data/
+  input/
+    sample_script.txt
+src/
+  fan_translation/
+    cli.py
+    client.py
+    config.py
+    pipeline.py
+    prompts.py
+tests/
+  test_prompting.py
+```
+
+## Quick start
+
+1. Create a virtual environment.
+2. Install the package in editable mode.
+3. Copy the example config and adjust the endpoint if needed.
+4. Run the translation command.
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
+Copy-Item config\project.example.json config\project.json
+fantranslate translate --project config\project.json --input data\input\sample_script.txt --output output\sample_script.md
+```
+
+Cloud API examples are also included:
+
+- `config/project.openai.example.json`
+- `config/project.gemini.example.json`
+
+## Local UI
+
+You can also run a browser UI for quick interactive translation:
+
+```powershell
+fantranslate ui --project config\project.json --host 127.0.0.1 --port 8000
+```
+
+Then open `http://127.0.0.1:8000` in your browser.
+
+The UI lets you:
+
+- paste raw source text directly
+- switch between local `llama.cpp`, OpenAI, Gemini, or another OpenAI-compatible provider
+- adjust model and endpoint settings per run
+- inspect the generated `llama-server` launch command
+- raise request timeout for slow first loads
+- paste glossary terms in JSON or `source | target | notes` format
+- review line-by-line translations before export
+- download Markdown or JSON output
+
+## Docker
+
+The repo now includes a `Dockerfile`, `.dockerignore`, and `compose.yaml` so you can run the UI or CLI in a container.
+
+Build the image:
+
+```powershell
+docker build -t fantranslate .
+```
+
+Run the browser UI from Docker:
+
+```powershell
+docker run --rm -p 8000:8000 fantranslate
+```
+
+Then open `http://127.0.0.1:8000`.
+
+If you want the container to use your local config, input, and output folders, use Docker Compose:
+
+```powershell
+docker compose up --build
+```
+
+The compose setup mounts:
+
+- `./config` to `/app/config`
+- `./data` to `/app/data`
+- `./output` to `/app/output`
+
+You can also run one-off CLI commands in the same image. For example:
+
+```powershell
+docker run --rm -v ${PWD}\config:/app/config -v ${PWD}\data:/app/data -v ${PWD}\output:/app/output fantranslate translate --project config/project.json --input data/input/sample_script.txt --output output/sample_script.md
+```
+
+## Runtime expectations
+
+The CLI talks to an OpenAI-compatible `/chat/completions` endpoint. That means it should work with local runtimes that expose that API shape.
+
+Default settings:
+
+- `runtime`: `llama.cpp`
+- `model`: `Gemma4_E2B_Abliterated_Baked_HF_Ready`
+- `api_base`: `http://127.0.0.1:8080/v1`
+- `api_key`: `llama.cpp`
+
+When the translator runs inside Docker and your model server runs on your host machine, `127.0.0.1` points at the container, not your host. In that setup, change `api_base` in `config/project.json` to `http://host.docker.internal:8080/v1`.
+
+The easiest way to use the configured model is with a local `llama-server`.
+
+Print the command implied by your project config:
+
+```powershell
+fantranslate llama-cpp-command --project config\project.json
+```
+
+You can point `llama.cpp` at the model in two ways:
+
+- set `gguf_path` to a local `.gguf` file you already downloaded
+- set `hf_repo` and `hf_file` so `llama-server` fetches the chosen quant directly from Hugging Face
+
+Example launch command:
+
+```powershell
+llama-server -hfr "mradermacher/Gemma4_E2B_Abliterated_Baked_HF_Ready-i1-GGUF" -hff "YOUR_CHOSEN_QUANT.gguf" -c 8192 --host 127.0.0.1 --port 8080
+```
+
+If you use a different OpenAI-compatible runtime, update `api_base` and `model` in `config/project.json`.
+
+## Cloud providers
+
+The project now has first-class config support for these providers:
+
+- `llama.cpp`: local OpenAI-compatible endpoint, usually `http://127.0.0.1:8080/v1`
+- `openai`: OpenAI Chat Completions at `https://api.openai.com/v1`
+- `gemini`: Gemini's OpenAI-compatible endpoint at `https://generativelanguage.googleapis.com/v1beta/openai`
+- `custom`: any other OpenAI-compatible base URL
+
+The safest pattern for cloud keys is to keep `api_key` blank and set `api_key_env` instead.
+
+OpenAI example:
+
+```powershell
+$env:OPENAI_API_KEY="your-openai-key"
+fantranslate translate --project config\project.openai.example.json --input data\input\sample_script.txt --output output\sample_script-openai.md
+```
+
+Gemini example:
+
+```powershell
+$env:GEMINI_API_KEY="your-gemini-key"
+fantranslate translate --project config\project.gemini.example.json --input data\input\sample_script.txt --output output\sample_script-gemini.md
+```
+
+If you use the browser UI, leaving the API key blank tells the server to use the configured environment variable when available.
+
+## Input format
+
+The translator treats each non-empty line as a separate unit. Blank lines are preserved in the output as section breaks.
+
+Example:
+
+```text
+AKI: Are you sure this is the place?
+REN: It has to be. The map ends here.
+
+NARRATION: The wind grows colder.
+```
+
+## Output formats
+
+### Markdown
+
+Produces a bilingual review-friendly file like this:
+
+```markdown
+# Translation Output
+
+## Line 1
+Source: AKI: Are you sure this is the place?
+Translation: ...
+```
+
+### JSON
+
+Produces structured entries that are easier to post-process for reinsertion pipelines.
+
+## Glossary and notes
+
+`config/glossary.example.json` lets you define fixed translations for names, techniques, places, and recurring terms.
+
+`notes_path` inside the project config can point to a plain text file for tone guidance such as:
+
+- preserve honorifics
+- keep attack names in romaji
+- translate school terminology naturally
+
+## Recommended workflow
+
+1. Translate a chapter or scene into Markdown.
+2. Review the bilingual output and tighten awkward lines.
+3. Update the glossary when you spot repeated terms.
+4. Re-run the translation for later chapters with the improved glossary.
+
+## Limitations
+
+- This scaffold assumes your model endpoint already exists and is reachable.
+- Output quality depends heavily on the prompt, the model, and the source text quality.
+- OCR cleanup, image bubble extraction, and reinsertion are not included yet.
+
+## Next ideas
+
+- add OCR ingestion for manga pages
+- add a second-pass editor prompt
+- export translation memory
+- create a small review UI
