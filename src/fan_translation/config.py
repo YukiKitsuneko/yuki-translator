@@ -38,8 +38,6 @@ class ProjectConfig:
     temperature: float = 0.2
     chunk_size: int = 8
     context_window: int = 2
-    single_pass_translation: bool = False
-    enable_proofreading: bool = True
     style: str = "Natural fan translation with consistent terminology."
     preserve_line_breaks: bool = True
     glossary_path: Path | None = None
@@ -74,8 +72,6 @@ class ProjectConfig:
             temperature=float(raw.get("temperature", 0.2)),
             chunk_size=int(raw.get("chunk_size", 8)),
             context_window=int(raw.get("context_window", 2)),
-            single_pass_translation=bool(raw.get("single_pass_translation", False)),
-            enable_proofreading=bool(raw.get("enable_proofreading", True)),
             style=raw.get(
                 "style",
                 "Natural fan translation with consistent terminology.",

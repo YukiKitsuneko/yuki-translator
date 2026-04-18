@@ -199,11 +199,7 @@ def _translate_lines(
     extracted_characters: list[str] = []
     extracted_locations: list[str] = []
     extracted_terms: list[str] = []
-    for chunk in _translation_chunks(
-        source_units=source_units,
-        chunk_size=project.chunk_size,
-        single_pass_translation=project.single_pass_translation,
-    ):
+    for chunk in _chunked(source_units, project.chunk_size):
         context = _context_for_chunk(source_units, chunk, project.context_window)
         user_prompt = build_user_prompt(project, chunk, context, glossary, notes)
         response = client.translate_with_metadata(
@@ -260,18 +256,6 @@ def _chunked(
     units: list[TranslationUnit], chunk_size: int
 ) -> list[list[TranslationUnit]]:
     return [units[index : index + chunk_size] for index in range(0, len(units), chunk_size)]
-
-
-def _translation_chunks(
-    source_units: list[TranslationUnit],
-    chunk_size: int,
-    single_pass_translation: bool,
-) -> list[list[TranslationUnit]]:
-    if not source_units:
-        return []
-    if single_pass_translation:
-        return [source_units]
-    return _chunked(source_units, max(1, chunk_size))
 
 
 def _context_for_chunk(
