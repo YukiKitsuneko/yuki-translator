@@ -1,6 +1,6 @@
 # Yuki Fan Translator
 
-Beta `0.0.001`
+Beta `0.2.0.001`
 
 ![Version](https://img.shields.io/badge/version-0.0.001-2f6fed)
 ![Status](https://img.shields.io/badge/status-beta-f59e0b)
@@ -8,7 +8,12 @@ Beta `0.0.001`
 ![Docker Compose](https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white)
 ![Providers](https://img.shields.io/badge/providers-llama.cpp%20%7C%20OpenAI%20%7C%20Gemini-7c3aed)
 
-Yuki Fan Translator is a lightweight browser-based fan translation workspace for Japanese-to-English script translation. It is built for fast excerpt testing, glossary-aware translation passes, proofreading previews, and export-ready output without leaving the browser.
+Yuki Fan Translator is a lightweight browser-based fan translation workspace for Japanese-to-English script translation. It is built for fast excerpt testing, glossary-aware translation passes, extraction previews, optional proofreading passes, and export-ready output without leaving the browser.
+
+New here:
+
+- read the step-by-step [Beginner Guide](./BEGINNER_GUIDE.md)
+- for hosted local-model deployment, read the [Runpod Guide](./RUNPOD_GUIDE.md)
 
 It supports:
 
@@ -42,17 +47,23 @@ What happens automatically:
 ## Feature Checklist
 
 - [x] Browser UI for excerpt translation
+- [x] EPUB upload with chapter selection
 - [x] Local `llama.cpp` support
 - [x] OpenAI / ChatGPT API support
 - [x] Gemini API support
 - [x] Custom OpenAI-compatible endpoint support
 - [x] Glossary-aware translation requests
+- [x] Single-pass translation mode
+- [x] Optional proofreading toggle
+- [x] Live request estimate in the UI
 - [x] Extraction preview for new characters, locations, and terms
 - [x] Proofreading preview
 - [x] Markdown export
 - [x] JSON export
 - [x] Docker Compose stack with model prep, `llama.cpp`, and UI
 - [x] Runtime prompt injection through env vars or secret files
+- [x] Runpod deployment image and guide
+- [x] GitHub Actions pipeline for Runpod image/template flow
 
 ## Screenshot
 
@@ -65,8 +76,12 @@ UI preview section for GitHub:
 ## What It Does
 
 - translates pasted script excerpts line by line
+- can inspect an EPUB and translate only selected chapters
 - preserves blank lines and structure for easier review
 - injects glossary terms, style guidance, and notes into the translation request
+- can force translation into a single request for faster runs
+- can disable proofreading entirely when speed matters more than cleanup
+- shows a live estimate of how many model requests the current run will send
 - shows export, extraction, and proofreading previews in the UI
 - exports Markdown or JSON
 - supports Docker for running the UI and local `llama.cpp` stack together
@@ -81,15 +96,23 @@ UI preview section for GitHub:
 ## Features
 
 - browser UI for quick translation iteration
+- EPUB upload mode with per-chapter selection
 - glossary input in JSON or `source | target | notes` format
 - extraction preview for newly detected characters, locations, and terms
-- proofreading preview after translation
+- single-pass translation mode for `1` translation request instead of chunked translation
+- optional proofreading toggle so you can choose between:
+  - `2` total requests: `1` translation + `1` proofreading
+  - `1` total request: translation only
+- live request estimate before you click translate
+- proofreading preview after translation when enabled
 - cloud provider support for OpenAI and Gemini
 - Docker Compose flow with:
   - model download step
   - `llama.cpp` service
   - UI service
 - optional prompt injection through secret files or environment variables
+- Runpod Pod hosting support
+- GitHub Actions pipeline for Runpod image builds and template sync
 
 ## Project Layout
 
@@ -99,21 +122,30 @@ config/
   project.example.json
   project.gemini.example.json
   project.openai.example.json
+  project.runpod.example.json
   project.json
 data/
   input/
+docker/
+  runpod/
+scripts/
+  sync_runpod_template.py
 src/
   fan_translation/
     cli.py
     client.py
     config.py
+    epub.py
     pipeline.py
     prompts.py
     server.py
     web/
 tests/
+BEGINNER_GUIDE.md
 README.md
 Dockerfile
+Dockerfile.runpod
+RUNPOD_GUIDE.md
 compose.yaml
 pyproject.toml
 ```
@@ -193,6 +225,29 @@ docker compose logs -f llama
 docker compose logs llama --tail 200
 docker compose logs -f app
 ```
+
+## Runpod
+
+If you want to host the full local `llama.cpp` stack online instead of using cloud APIs, this repo includes a dedicated Runpod deployment path:
+
+- `Dockerfile.runpod`
+- `docker/runpod/start.sh`
+- `config/project.runpod.example.json`
+- [Runpod deployment guide](./RUNPOD_GUIDE.md)
+
+This setup is designed for a single Runpod Pod that runs both:
+
+- `llama.cpp` on port `8080`
+- Yuki Fan Translator UI on port `8000`
+
+It stores the model under `/workspace/models` so it can persist when your Pod has attached storage.
+
+This repo also includes a GitHub Actions pipeline for the Runpod image and template flow:
+
+- `.github/workflows/runpod-pipeline.yml`
+- `scripts/sync_runpod_template.py`
+
+That lets you push to GitHub, build the Runpod image automatically, and optionally update a Runpod Pod template to the newest image.
 
 ## Local llama.cpp
 
@@ -310,11 +365,15 @@ If no private prompt is injected, the app falls back to a generic built-in promp
 The browser UI includes:
 
 - source text input
+- EPUB upload mode with chapter checkboxes
 - provider switcher
 - model selector
 - API base and API key fields
 - GGUF / HF repo / HF file settings
 - translation tuning controls
+- single-pass translation toggle
+- enable/disable proofreading toggle
+- live model request estimate
 - glossary and notes fields
 - export preview
 - extraction preview
@@ -343,12 +402,16 @@ Designed for structured processing and reinsertion pipelines.
 ## Recommended Workflow
 
 1. Paste an excerpt into the UI.
-2. Choose your provider and model.
-3. Add glossary terms and style notes.
-4. Translate.
-5. Review export, extraction, and proofreading previews.
-6. Export Markdown or JSON.
-7. Update glossary entries as your canon solidifies.
+2. Or switch to EPUB mode and select the chapters you want.
+3. Choose your provider and model.
+4. Add glossary terms and style notes.
+5. Decide whether to use chunked mode or single-pass translation.
+6. Decide whether to keep proofreading on or disable it for speed.
+7. Check the request estimate.
+8. Translate.
+9. Review export, extraction, and optional proofreading previews.
+10. Export Markdown or JSON.
+11. Update glossary entries as your canon solidifies.
 
 ## Troubleshooting
 
@@ -382,6 +445,8 @@ Common causes:
 
 For local models, try:
 
+- turn on single-pass translation for smaller excerpts
+- turn off proofreading if you do not need the second cleanup pass
 - lower `chunk_size`
 - lower `context_window`
 - smaller context size if appropriate
@@ -389,6 +454,8 @@ For local models, try:
 
 For cloud models, try:
 
+- single-pass translation for smaller excerpts
+- disable proofreading for draft-only runs
 - smaller chunks
 - shorter context windows
 - faster model variants
