@@ -9,6 +9,7 @@ const launchCommand = document.getElementById("launch-command");
 const translationTimer = document.getElementById("translation-timer");
 const tokensPerSecond = document.getElementById("tokens-per-second");
 const tokenCount = document.getElementById("token-count");
+const requestEstimate = document.getElementById("request-estimate");
 
 let latestMarkdown = "";
 let latestJson = "";
@@ -85,6 +86,8 @@ const fields = {
   temperature: document.getElementById("temperature"),
   chunkSize: document.getElementById("chunk-size"),
   contextWindow: document.getElementById("context-window"),
+  singlePassTranslation: document.getElementById("single-pass-translation"),
+  enableProofreading: document.getElementById("enable-proofreading"),
   requestTimeoutSeconds: document.getElementById("request-timeout-seconds"),
   llamaContextSize: document.getElementById("llama-context-size"),
   style: document.getElementById("style"),
@@ -122,6 +125,8 @@ function applyProjectDefaults(project) {
   fields.temperature.value = project.temperature;
   fields.chunkSize.value = project.chunk_size;
   fields.contextWindow.value = project.context_window;
+  fields.singlePassTranslation.checked = Boolean(project.single_pass_translation);
+  fields.enableProofreading.checked = Boolean(project.enable_proofreading);
   fields.requestTimeoutSeconds.value = project.request_timeout_seconds;
   fields.llamaContextSize.value = project.llama_context_size;
   fields.style.value = project.style;
@@ -130,6 +135,7 @@ function applyProjectDefaults(project) {
   launchCommand.textContent = project.launch_command;
   updateProviderHints();
   syncProviderUi();
+  updateRequestEstimate();
 }
 
 form.addEventListener("submit", async (event) => {
@@ -165,6 +171,8 @@ form.addEventListener("submit", async (event) => {
       temperature: Number(fields.temperature.value),
       chunk_size: Number(fields.chunkSize.value),
       context_window: Number(fields.contextWindow.value),
+      single_pass_translation: fields.singlePassTranslation.checked,
+      enable_proofreading: fields.enableProofreading.checked,
       request_timeout_seconds: Number(fields.requestTimeoutSeconds.value),
       style: fields.style.value,
       glossary_text: fields.glossaryText.value,
@@ -188,18 +196,25 @@ form.addEventListener("submit", async (event) => {
     latestJson = data.json_output;
     preview.textContent = latestMarkdown;
     renderExtractionPreview(data.extraction);
-    renderProofreadingPreview(
-      data.proofreading_preview ||
-      data.proofreading_error ||
-      "Proofreading preview unavailable.",
-    );
+    if (data.enable_proofreading) {
+      renderProofreadingPreview(
+        data.proofreading_preview ||
+        data.proofreading_error ||
+        "Proofreading preview unavailable.",
+      );
+    } else {
+      renderProofreadingPreview("Proofreading disabled for this run.");
+    }
     downloadMarkdown.disabled = false;
     downloadJson.disabled = false;
     const elapsedLabel = formatElapsedTime(data.elapsed_seconds);
     translationTimer.textContent = elapsedLabel;
     tokensPerSecond.textContent = formatTokensPerSecond(data.tokens_per_second);
     tokenCount.textContent = formatTokenCount(data.total_tokens);
-    if (data.proofreading_error) {
+    if (!data.enable_proofreading) {
+      statusEl.textContent =
+        `Translated ${data.entries.length} line(s) in ${elapsedLabel}. Proofreading was disabled.`;
+    } else if (data.proofreading_error) {
       statusEl.textContent =
         `Translated ${data.entries.length} line(s) in ${elapsedLabel}. Proofreading preview failed: ${data.proofreading_error}`;
     } else {
@@ -225,6 +240,16 @@ for (const field of [
   fields.llamaContextSize,
 ]) {
   field.addEventListener("input", renderLaunchCommand);
+}
+
+for (const field of [
+  fields.sourceText,
+  fields.chunkSize,
+  fields.singlePassTranslation,
+  fields.enableProofreading,
+]) {
+  field.addEventListener("input", updateRequestEstimate);
+  field.addEventListener("change", updateRequestEstimate);
 }
 
 fields.provider.addEventListener("change", () => {
@@ -303,6 +328,9 @@ function applyProviderDefaults() {
   fields.chunkSize.value = defaults.chunkSize;
   fields.contextWindow.value = defaults.contextWindow;
   fields.requestTimeoutSeconds.value = defaults.requestTimeoutSeconds;
+  fields.singlePassTranslation.checked = loadedProject?.single_pass_translation || false;
+  fields.enableProofreading.checked = loadedProject?.enable_proofreading ?? true;
+  updateRequestEstimate();
 }
 
 function getProviderDefaults(provider) {
@@ -455,6 +483,26 @@ function syncModelBadge() {
   document.getElementById("project-model").textContent = getEffectiveModel() || "custom";
 }
 
+function updateRequestEstimate() {
+  const nonEmptyLineCount = fields.sourceText.value
+    .split(/\r?\n/)
+    .filter((line) => line.trim())
+    .length;
+
+  if (!nonEmptyLineCount) {
+    requestEstimate.textContent = "Estimated model requests: 0";
+    return;
+  }
+
+  const translationRequests = fields.singlePassTranslation.checked
+    ? 1
+    : Math.ceil(nonEmptyLineCount / Math.max(1, Number(fields.chunkSize.value) || 1));
+  const proofreadingRequests = fields.enableProofreading.checked ? 1 : 0;
+  const totalRequests = translationRequests + proofreadingRequests;
+  requestEstimate.textContent =
+    `Estimated model requests: ${totalRequests} total (${translationRequests} translation + ${proofreadingRequests} proofreading)`;
+}
+
 function clearPreviews() {
   latestMarkdown = "";
   latestJson = "";
@@ -463,8 +511,9 @@ function clearPreviews() {
   extractionPreview.innerHTML =
     '<p class="proofreading-loading">Extracting characters, locations, and terms...</p>';
   proofreadingPreview.classList.remove("empty");
-  proofreadingPreview.innerHTML =
-    '<p class="proofreading-loading">Generating fresh proofreading preview...</p>';
+  proofreadingPreview.innerHTML = fields.enableProofreading.checked
+    ? '<p class="proofreading-loading">Generating fresh proofreading preview...</p>'
+    : "<p>Proofreading disabled for this run.</p>";
   downloadMarkdown.disabled = true;
   downloadJson.disabled = true;
 }

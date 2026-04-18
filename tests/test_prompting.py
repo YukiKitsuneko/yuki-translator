@@ -22,6 +22,7 @@ from fan_translation.pipeline import (
     entries_to_markdown,
     parse_glossary_text,
     proofread_entries,
+    translate_text_with_metrics,
 )
 from fan_translation.prompts import (
     TranslationUnit,
@@ -487,6 +488,89 @@ class PromptingTests(unittest.TestCase):
         )
         self.assertEqual(parsed["new_locations"], ["Goblin Labyrinth"])
         self.assertEqual(parsed["new_terms"], ["Dungeon Core"])
+
+
+    def test_single_pass_translation_uses_one_translation_request(self) -> None:
+        client = mock.Mock()
+        client.translate_with_metadata.return_value = ModelTranslationResponse(
+            content=json.dumps(
+                {
+                    "translations": [
+                        {"line_number": 1, "translation": "One"},
+                        {"line_number": 2, "translation": "Two"},
+                        {"line_number": 3, "translation": "Three"},
+                    ],
+                    "new_characters": [],
+                    "new_locations": [],
+                    "new_terms": [],
+                }
+            )
+        )
+        project = ProjectConfig(chunk_size=1, single_pass_translation=True)
+
+        run = translate_text_with_metrics(
+            lines=["a", "b", "c"],
+            project=project,
+            client=client,
+            glossary=[],
+            notes="",
+        )
+
+        self.assertEqual(client.translate_with_metadata.call_count, 1)
+        self.assertEqual(
+            [entry.translation for entry in run.entries],
+            ["One", "Two", "Three"],
+        )
+
+    def test_chunked_translation_uses_multiple_requests_when_single_pass_is_off(self) -> None:
+        client = mock.Mock()
+        client.translate_with_metadata.side_effect = [
+            ModelTranslationResponse(
+                content=json.dumps(
+                    {
+                        "translations": [{"line_number": 1, "translation": "One"}],
+                        "new_characters": [],
+                        "new_locations": [],
+                        "new_terms": [],
+                    }
+                )
+            ),
+            ModelTranslationResponse(
+                content=json.dumps(
+                    {
+                        "translations": [{"line_number": 2, "translation": "Two"}],
+                        "new_characters": [],
+                        "new_locations": [],
+                        "new_terms": [],
+                    }
+                )
+            ),
+            ModelTranslationResponse(
+                content=json.dumps(
+                    {
+                        "translations": [{"line_number": 3, "translation": "Three"}],
+                        "new_characters": [],
+                        "new_locations": [],
+                        "new_terms": [],
+                    }
+                )
+            ),
+        ]
+        project = ProjectConfig(chunk_size=1, single_pass_translation=False)
+
+        run = translate_text_with_metrics(
+            lines=["a", "b", "c"],
+            project=project,
+            client=client,
+            glossary=[],
+            notes="",
+        )
+
+        self.assertEqual(client.translate_with_metadata.call_count, 3)
+        self.assertEqual(
+            [entry.translation for entry in run.entries],
+            ["One", "Two", "Three"],
+        )
 
 
 if __name__ == "__main__":
