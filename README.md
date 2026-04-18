@@ -47,7 +47,6 @@ What happens automatically:
 ## Feature Checklist
 
 - [x] Browser UI for excerpt translation
-- [x] EPUB upload with chapter selection
 - [x] Local `llama.cpp` support
 - [x] OpenAI / ChatGPT API support
 - [x] Gemini API support
@@ -62,8 +61,6 @@ What happens automatically:
 - [x] JSON export
 - [x] Docker Compose stack with model prep, `llama.cpp`, and UI
 - [x] Runtime prompt injection through env vars or secret files
-- [x] Runpod deployment image and guide
-- [x] GitHub Actions pipeline for Runpod image/template flow
 
 ## Screenshot
 
@@ -76,7 +73,6 @@ UI preview section for GitHub:
 ## What It Does
 
 - translates pasted script excerpts line by line
-- can inspect an EPUB and translate only selected chapters
 - preserves blank lines and structure for easier review
 - injects glossary terms, style guidance, and notes into the translation request
 - can force translation into a single request for faster runs
@@ -96,7 +92,6 @@ UI preview section for GitHub:
 ## Features
 
 - browser UI for quick translation iteration
-- EPUB upload mode with per-chapter selection
 - glossary input in JSON or `source | target | notes` format
 - extraction preview for newly detected characters, locations, and terms
 - single-pass translation mode for `1` translation request instead of chunked translation
@@ -111,8 +106,6 @@ UI preview section for GitHub:
   - `llama.cpp` service
   - UI service
 - optional prompt injection through secret files or environment variables
-- Runpod Pod hosting support
-- GitHub Actions pipeline for Runpod image builds and template sync
 
 ## Project Layout
 
@@ -365,7 +358,6 @@ If no private prompt is injected, the app falls back to a generic built-in promp
 The browser UI includes:
 
 - source text input
-- EPUB upload mode with chapter checkboxes
 - provider switcher
 - model selector
 - API base and API key fields
@@ -402,16 +394,15 @@ Designed for structured processing and reinsertion pipelines.
 ## Recommended Workflow
 
 1. Paste an excerpt into the UI.
-2. Or switch to EPUB mode and select the chapters you want.
-3. Choose your provider and model.
-4. Add glossary terms and style notes.
-5. Decide whether to use chunked mode or single-pass translation.
-6. Decide whether to keep proofreading on or disable it for speed.
-7. Check the request estimate.
-8. Translate.
-9. Review export, extraction, and optional proofreading previews.
-10. Export Markdown or JSON.
-11. Update glossary entries as your canon solidifies.
+2. Choose your provider and model.
+3. Add glossary terms and style notes.
+4. Decide whether to use chunked mode or single-pass translation.
+5. Decide whether to keep proofreading on or disable it for speed.
+6. Check the request estimate.
+7. Translate.
+8. Review export, extraction, and optional proofreading previews.
+9. Export Markdown or JSON.
+10. Update glossary entries as your canon solidifies.
 
 ## Troubleshooting
 
