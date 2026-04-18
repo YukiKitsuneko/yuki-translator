@@ -13,7 +13,6 @@ Yuki Fan Translator is a lightweight browser-based fan translation workspace for
 New here:
 
 - read the step-by-step [Beginner Guide](./BEGINNER_GUIDE.md)
-- for hosted local-model deployment, read the [Runpod Guide](./RUNPOD_GUIDE.md)
 
 It supports:
 
@@ -115,14 +114,9 @@ config/
   project.example.json
   project.gemini.example.json
   project.openai.example.json
-  project.runpod.example.json
   project.json
 data/
   input/
-docker/
-  runpod/
-scripts/
-  sync_runpod_template.py
 src/
   fan_translation/
     cli.py
@@ -137,8 +131,6 @@ tests/
 BEGINNER_GUIDE.md
 README.md
 Dockerfile
-Dockerfile.runpod
-RUNPOD_GUIDE.md
 compose.yaml
 pyproject.toml
 ```
@@ -218,29 +210,6 @@ docker compose logs -f llama
 docker compose logs llama --tail 200
 docker compose logs -f app
 ```
-
-## Runpod
-
-If you want to host the full local `llama.cpp` stack online instead of using cloud APIs, this repo includes a dedicated Runpod deployment path:
-
-- `Dockerfile.runpod`
-- `docker/runpod/start.sh`
-- `config/project.runpod.example.json`
-- [Runpod deployment guide](./RUNPOD_GUIDE.md)
-
-This setup is designed for a single Runpod Pod that runs both:
-
-- `llama.cpp` on port `8080`
-- Yuki Fan Translator UI on port `8000`
-
-It stores the model under `/workspace/models` so it can persist when your Pod has attached storage.
-
-This repo also includes a GitHub Actions pipeline for the Runpod image and template flow:
-
-- `.github/workflows/runpod-pipeline.yml`
-- `scripts/sync_runpod_template.py`
-
-That lets you push to GitHub, build the Runpod image automatically, and optionally update a Runpod Pod template to the newest image.
 
 ## Local llama.cpp
 
