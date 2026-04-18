@@ -119,6 +119,25 @@
             <input id="context-window" name="context_window" type="number" min="0">
           </label>
 
+          <div class="field field-wide toggle-card">
+            <span>Request mode</span>
+            <label class="checkbox-row" for="single-pass-translation">
+              <input id="single-pass-translation" name="single_pass_translation" type="checkbox">
+              <div class="checkbox-copy">
+                <strong>Single-pass translation</strong>
+                <p>Send the whole excerpt in one translation request, then run one proofreading request after that.</p>
+              </div>
+            </label>
+            <label class="checkbox-row" for="enable-proofreading">
+              <input id="enable-proofreading" name="enable_proofreading" type="checkbox" checked>
+              <div class="checkbox-copy">
+                <strong>Enable proofreading</strong>
+                <p>Run the second proofreading request after translation. Turn this off if you want the fastest possible output.</p>
+              </div>
+            </label>
+            <p id="request-estimate" class="request-estimate">Estimated model requests: 0</p>
+          </div>
+
           <label class="field">
             <span>Request timeout</span>
             <input id="request-timeout-seconds" name="request_timeout_seconds" type="number" min="10">

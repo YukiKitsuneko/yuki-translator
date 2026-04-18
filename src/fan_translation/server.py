@@ -72,6 +72,8 @@ class TranslationWebApp:
                             "temperature": self.project.temperature,
                             "chunk_size": self.project.chunk_size,
                             "context_window": self.project.context_window,
+                            "single_pass_translation": self.project.single_pass_translation,
+                            "enable_proofreading": self.project.enable_proofreading,
                             "request_timeout_seconds": self.project.request_timeout_seconds,
                             "style": self.project.style,
                             "glossary_text": _serialize_glossary(self.project),
@@ -128,6 +130,18 @@ class TranslationWebApp:
             context_window=max(
                 0, int(payload.get("context_window", self.project.context_window))
             ),
+            single_pass_translation=_coerce_bool(
+                payload.get(
+                    "single_pass_translation",
+                    self.project.single_pass_translation,
+                )
+            ),
+            enable_proofreading=_coerce_bool(
+                payload.get(
+                    "enable_proofreading",
+                    self.project.enable_proofreading,
+                )
+            ),
             request_timeout_seconds=max(
                 10,
                 int(
@@ -150,16 +164,17 @@ class TranslationWebApp:
         )
         proofreading_preview = ""
         proofreading_error = ""
-        try:
-            proofreading_response = proofread_entries(
-                project=effective_project,
-                client=client,
-                entries=run.entries,
-            )
-            proofreading_preview = proofreading_response.content
-            accumulate_metrics(run.metrics, proofreading_response)
-        except (ValueError, ModelResponseError) as exc:
-            proofreading_error = str(exc)
+        if effective_project.enable_proofreading:
+            try:
+                proofreading_response = proofread_entries(
+                    project=effective_project,
+                    client=client,
+                    entries=run.entries,
+                )
+                proofreading_preview = proofreading_response.content
+                accumulate_metrics(run.metrics, proofreading_response)
+            except (ValueError, ModelResponseError) as exc:
+                proofreading_error = str(exc)
         elapsed_seconds = time.perf_counter() - started_at
         tokens_per_second = None
         if elapsed_seconds > 0 and run.metrics.total_tokens > 0:
@@ -175,6 +190,7 @@ class TranslationWebApp:
                     "new_locations": run.extraction.new_locations,
                     "new_terms": run.extraction.new_terms,
                 },
+                "enable_proofreading": effective_project.enable_proofreading,
                 "proofreading_preview": proofreading_preview,
                 "proofreading_error": proofreading_error,
                 "elapsed_seconds": round(elapsed_seconds, 3),
@@ -258,3 +274,9 @@ def _coalesce_text(value: object, fallback: str) -> str:
     if text:
         return text
     return fallback
+
+
+def _coerce_bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
